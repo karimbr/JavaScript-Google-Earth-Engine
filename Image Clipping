@@ -1,0 +1,34 @@
+// This code can be used to create a clipped image for selected bands and add it in the map as a layer 
+// Also we can download the image to use it for further analysis
+
+var s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED"),
+    admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
+
+var filteredAdmin2 = admin2
+.filter(ee.Filter.eq('ADM1_NAME','Blida'))
+.filter(ee.Filter.eq('ADM2_NAME','Chrea'));
+
+var geometry = filteredAdmin2.geometry();
+
+var filteredS2 = s2
+.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE',30))
+.filter(ee.Filter.date('2024-01-01','2024-03-01'))
+.filter(ee.Filter.bounds(geometry));
+
+var image = filteredS2.median();
+
+var clipped = image.clip(geometry);
+
+print(clipped);
+
+var exportImage = clipped.select(['B4','B3','B2']);
+print(exportImage);
+
+var rgbVis = {
+  min:0,
+  max:3000,
+  bands:['B4','B3','B2']
+};
+
+Map.centerObject(geometry);
+Map.addLayer(clipped,rgbVis,'clipped composite');
