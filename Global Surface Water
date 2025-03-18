@@ -1,0 +1,71 @@
+var gsw = ee.Image("JRC/GSW1_4/GlobalSurfaceWater"),
+    gswYearly = ee.ImageCollection("JRC/GSW1_4/YearlyHistory"),
+    hydrobasins = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
+
+print(gsw);
+// select the 'occurrence' band
+var occurrence = gsw.select('occurrence');
+// visualize it
+var VisParams = {
+  min:0,
+  max:100,
+  palette:['red','blue']
+};
+Map.addLayer(occurrence, VisParams, 'water occurence');
+
+// a map showing everywhere surface water was present.
+// Select the 'max_extent' band
+var maximum = gsw.select('max_extent');
+var VisParams2 = {
+  min:0,
+  max:1,
+  palette:['grey','blue']
+};
+Map.addLayer(maximum, VisParams2, 'max water');
+
+//Create a Water Mask
+
+var masked = maximum.updateMask(maximum);
+// There is a handy short-hand for masking out 0 values for a layer
+// You can call selfMask() which will mask the image with itself
+
+var masked = maximum.selfMask();
+Map.addLayer(masked,VisParams2,'water');
+
+// Permanent water can be defined where water is 
+// present > 5 months in a year
+
+var seasonality = gsw.select('seasonality').selfMask();
+Map.addLayer(seasonality,VisParams2,'seasonality');
+
+//Find Lost Waterbodies
+var water = gsw.select('transition');
+print(water);
+var lostwater = water.eq(3).or(water.eq(6)).selfMask();
+var VisParams3 ={
+  min:0,
+  max:1,
+  palette:['white','red']
+};
+Map.addLayer(lostwater,VisParams3,'lost water');
+// Using the transition band to find the total surface water gain.
+
+//Get Yearly Water History
+// Filter using the 'year' property
+var filtered = gswYearly.filter(ee.Filter.eq('year',2020));
+var gsw2020 = ee.Image(filtered.first());
+// Select permanent or seasonal water
+var water2020 = gsw2020.eq(2).or(gsw2020.eq(3)).selfMask();
+var VisParams4 ={
+  min:0,
+  max:1,
+  palette:['white','blue']
+};
+Map.addLayer(water2020,VisParams4,'2020 water');
+
+//Locate a SubBasin
+Map.addLayer(hydrobasins);
+
+var basin = hydrobasins.filter(ee.Filter.eq('HYBAS_ID',1070030460));
+Map.centerObject(basin);
+Map.addLayer(basin,{color:"green"},'sub-basin');
