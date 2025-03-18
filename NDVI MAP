@@ -1,5 +1,6 @@
 // This code create a function that computes NDVI for an image and adds it as a band
 // Then display the NDVI map for the selected region
+// Compute a Maximum NDVI Composite and add it to the Map
 
 var s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED"),
     admin2 = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2");
@@ -37,3 +38,24 @@ var ndvivs = {min:0,max:0.5,palette:palette};
 Map.centerObject(geometry,9);
 Map.addLayer(geometry,{},'selected region');
 Map.addLayer(ndvicomposite.clip(geometry), ndvivs, 'ndvi');
+
+var medianComposite = withndvi
+.reduce(ee.Reducer.median()).regexpRename('_median','');
+print(medianComposite);
+
+// use regexpRename to remove the _median from the name
+
+// Apply a Percentile Reducer
+var percentileComposite = withndvi
+.reduce(ee.Reducer.percentile([25])).regexpRename('_p25', '');
+print(percentileComposite);
+
+var rgbVis = {min:0,max:3000,bands:['B4','B3','B2']};
+
+Map.addLayer(medianComposite.clip(geometry),rgbVis,'median Composite');
+Map.addLayer(percentileComposite.clip(geometry),rgbVis,'25th-Percentile Composite');
+
+var maxComposite = withndvi.reduce(ee.Reducer.max());
+
+var ndviMaxcomposite = maxComposite.select('ndvi_max');
+Map.addLayer(ndviMaxcomposite.clip(geometry),ndvivs,'max ndvi');
