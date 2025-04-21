@@ -1,0 +1,54 @@
+// at the end of this code, I created a map of surface water in a selected basin
+// also, the type of the map is converted to a vector 
+
+var hydrobasins = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_9"),
+    gsw = ee.Image("JRC/GSW1_4/GlobalSurfaceWater");
+
+Map.addLayer(hydrobasins);
+
+var basin = hydrobasins.filter(ee.Filter.eq('HYBAS_ID',1090083620));
+var geometry = basin.geometry();
+Map.centerObject(geometry,10);
+
+var water = gsw.select('max_extent');
+var clipped = water.clip(geometry).unmask(0);
+
+var VisParams = {
+  min:0,
+  max:1,
+  palette:['white','blue']
+};
+
+Map.addLayer(clipped,VisParams,'surface water');
+
+// Do unmask() to replace masked pixels with 0
+// This avoids extra pixels along the edges which was done in line 9
+// Perform a morphological closing to fill holes in waterbodies
+
+var waterprocessed = clipped.focalMax({
+  radius:30, 
+  kernelType:'square', 
+  units:"meters",
+  iterations:1
+}).focalMin({
+    radius:30, 
+    kernelType:'square', 
+    units:'meters',
+    iterations:1
+});
+  
+Map.addLayer(waterprocessed,VisParams,'water processed');
+
+//07. Convert Raster to Vector
+
+var vector = waterprocessed.reduceToVectors({
+  reducer:ee.Reducer.countEvery(), 
+  geometry:geometry, 
+  scale:30, 
+  eightConnected:false, 
+  maxPixels:1e10});
+
+Map.addLayer(vector,{color:'grey'},'water polygons');
+var vector2 = vector.filter(ee.Filter.eq('label',1));
+print(vector,vector2,waterprocessed,clipped,water,geometry);
+Map.addLayer(vector2,{color:'blue'},'water polygons 2');
