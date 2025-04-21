@@ -39,7 +39,7 @@ var waterprocessed = clipped.focalMax({
   
 Map.addLayer(waterprocessed,VisParams,'water processed');
 
-//07. Convert Raster to Vector
+// Convert Raster to Vector
 
 var vector = waterprocessed.reduceToVectors({
   reducer:ee.Reducer.countEvery(), 
